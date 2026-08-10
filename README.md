@@ -1,111 +1,662 @@
-# Local RAG Knowledge Base
+# Fedora Wi-Fi Hotspot
 
-A fully local, self-hosted Retrieval-Augmented Generation (RAG) system. Upload documents (PDF or text), ask questions about them, and get answers grounded in your own files — all running on your own machine, no cloud services, no API keys, no data leaving your computer.
+A lightweight command-line Wi-Fi hotspot tool for Fedora Linux.
 
-Built with FastAPI, ChromaDB, Ollama, and Streamlit.
+`fedora-wifi-hotspot` lets a Fedora system share its existing Wi-Fi connection through a software access point using the same wireless adapter, when the adapter and Linux driver support concurrent client + AP operation.
 
 ## Features
 
-- Ingest raw text or PDF documents
-- Ask questions with streaming answers
-- Per-document isolation (no cross-contamination between unrelated documents)
-- Choose any locally-installed Ollama model
-- Optional local benchmark logging
-- Fully Dockerized — one command to run the whole stack
+- Automatic Wi-Fi interface, PHY, driver, channel, frequency, and upstream network detection
+- Access Point and concurrent client + AP capability detection
+- Virtual AP interface creation with NetworkManager-aware setup
+- WPA2 access point through `hostapd`
+- DHCP through `dnsmasq`
+- IPv4 forwarding, NAT, firewall, and hotspot routing
+- Automatic cleanup on stop and failure
+- Interactive or command-line SSID/password configuration
+- Hardware diagnostics and hotspot status reporting
+- System-wide installation and uninstallation
+- Automatic privilege elevation
 
-## Prerequisites
+## Requirements
 
-Before running this project, you need:
+### Operating system
 
-1. **Docker** and **Docker Compose** installed
-2. **[Ollama](https://ollama.com/download)** installed and running on your host machine (not inside Docker)
-3. Pull the required embedding model (this is hardcoded and required for ingestion to work):
-   ```bash
-   ollama pull nomic-embed-text
-   ```
-4. Pull at least one chat model of your choice, for example:
-   ```bash
-   ollama pull qwen2.5-coder:7b
-   ```
+- Fedora Linux
 
-### Linux-specific setup (important)
+### Required packages
 
-By default, Ollama on Linux only listens on `127.0.0.1`, which makes it unreachable from inside Docker containers. You need to configure it to listen on all interfaces:
+The installer checks and installs:
 
-```bash
-sudo mkdir -p /etc/systemd/system/ollama.service.d
-sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null <<'EOF'
-[Service]
-Environment="OLLAMA_HOST=0.0.0.0"
-EOF
-sudo systemctl daemon-reload
-sudo systemctl restart ollama
-```
+- NetworkManager
+- iproute
+- iptables-nft
+- iw
+- hostapd
+- dnsmasq
 
-If Ollama fails to start after this change, check the logs:
-```bash
-sudo journalctl -u ollama -n 30 --no-pager
-```
+### Wireless hardware
 
-Common issues we ran into and their fixes:
+The wireless adapter and Linux driver must support:
 
-- **`permission denied` creating `/usr/share/ollama`** — the systemd-managed `ollama` user may not have access to its own data directory. Ensure ownership is correct: `sudo chown -R ollama:ollama /usr/share/ollama` (create the directory first with `sudo mkdir -p /usr/share/ollama` if it doesn't exist).
-- **Models don't show up (`ollama list` is empty) after this change** — if you originally pulled models while Ollama was running as your own user (not the systemd service), your models live under `~/.ollama/models`, but the service looks in `/usr/share/ollama/.ollama/models` by default. Point it at your existing models instead of re-downloading:
-  ```bash
-  sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null <<'EOF'
-  [Service]
-  Environment="OLLAMA_HOST=0.0.0.0"
-  Environment="OLLAMA_MODELS=/home/YOUR_USERNAME/.ollama/models"
-  EOF
-  sudo chmod -R o+rX /home/YOUR_USERNAME/.ollama
-  chmod o+x /home/YOUR_USERNAME
-  sudo systemctl daemon-reload
-  sudo systemctl restart ollama
-  ```
-  (replace `YOUR_USERNAME` with your actual username)
-- **`address already in use`** — an old Ollama process may still be running outside systemd's control. Find and stop it: `sudo lsof -i :11434`, then `sudo kill -9 <PID>`.
+- Managed/client mode
+- Access Point mode
+- Concurrent client + AP operation
 
-Verify Ollama is working correctly before proceeding:
-```bash
-sudo ss -tlnp | grep 11434
-```
-You should see it listening on `*:11434` or `0.0.0.0:11434`, not `127.0.0.1:11434`.
+Not every Wi-Fi adapter supports this configuration.
 
-## Running the project
+---
+
+# Installation
+
+Clone the repository:
 
 ```bash
-docker compose up --build
+git clone https://github.com/shubhamcoder260/fedora-wifi-hotspot.git
+cd fedora-wifi-hotspot
+sudo ./install.sh
 ```
 
-Then open your browser to:
-```
-http://localhost:8501
-```
+The installer verifies Fedora, installs missing dependencies, installs the application system-wide, and verifies the installation.
 
-Upload a document from the sidebar, pick a model and document from the dropdowns, and ask a question.
+After installation, `wifi-hotspot` is available from any directory.
 
-## Bulk ingestion (optional)
+---
 
-To ingest many files at once from the command line instead of the UI:
+# Quick Start
+
+## 1. Diagnose your hardware
+
 ```bash
-python3 bulk_ingest.py ./path/to/your/folder
+wifi-hotspot diagnose
 ```
-(Run this outside Docker, against a locally-running instance of the API — requires the same Python packages listed in `requirements.txt`.)
 
-## Known limitations
+A compatible system should report:
 
-This project has been extensively tested and benchmarked. Some honest, evidence-based limitations worth knowing:
+```text
+[✓] Managed/client mode
+[✓] Access Point mode
+[✓] Concurrent client + AP
+```
 
-- **Slow inference on CPU-only hardware.** Response times range from ~10 seconds (short factual answers) to 2-3 minutes (complex, multi-step questions), depending on your hardware and the model used.
-- **Unreliable at precise counting and enumeration.** In testing, the system consistently miscounted items in lists (e.g., asked to count named components across sections of a document, answers ranged from 25 to 40 when the correct count was 29). This is a known, fundamental limitation of how transformer language models generate text — not a bug specific to this project, and not something fixable through better retrieval or prompting alone.
-- **Can fabricate plausible-sounding elaboration beyond the source material**, especially when asked to "explain why" or provide reasoning not present in the retrieved context. Simple factual lookups are reliably accurate; open-ended "explain" or "rate" style questions are more prone to adding unstated, invented detail.
-- **No conversation memory.** Each question is answered independently — there's no chat history or follow-up question support yet.
-- **Single-provider (Ollama) only.** No support yet for hosted models like Claude or GPT.
+## 2. Start the hotspot
 
-## Roadmap / planned features
+Interactive mode:
 
-- Conversation history and follow-up question support
-- Native desktop app option
-- Recursive/smarter text chunking
-- Web page ingestion (not just files)
-- Multi-provider model support (Claude, GPT, etc.)
+```bash
+wifi-hotspot start
+```
+
+You will be asked for:
+
+```text
+Hotspot name:
+Hotspot password:
+```
+
+The password must contain 8 to 63 characters.
+
+Or specify them directly:
+
+```bash
+wifi-hotspot start --ssid "My Hotspot" --password "MyPassword123"
+```
+
+## 3. Connect your devices
+
+Connect your phone, laptop, tablet, or other Wi-Fi device to the selected SSID.
+
+The hotspot automatically provides DHCP addressing and routes client traffic through the host's existing Wi-Fi connection.
+
+## 4. Check status
+
+```bash
+wifi-hotspot status
+```
+
+Example:
+
+```text
+[✓] AP interface: ap0
+[✓] hostapd: running
+[✓] dnsmasq: running
+[✓] IPv4 forwarding: enabled
+[✓] Hotspot firewall/NAT: active
+[✓] Policy routing: configured
+[✓] Connected clients: 1
+```
+
+## 5. Stop the hotspot
+
+```bash
+wifi-hotspot stop
+```
+
+This removes the AP interface, routing configuration, firewall/NAT rules, and hotspot services.
+
+---
+
+# Commands
+
+| Command | Description |
+|---|---|
+| `wifi-hotspot start` | Start the hotspot |
+| `wifi-hotspot stop` | Stop the hotspot |
+| `wifi-hotspot status` | Show hotspot status |
+| `wifi-hotspot diagnose` | Detect Wi-Fi hardware and network capabilities |
+| `wifi-hotspot help` | Show command help |
+
+## Start options
+
+```text
+--ssid NAME
+    Set the hotspot name.
+
+--password PASSWORD
+    Set the WPA2 password.
+    Minimum: 8 characters.
+    Maximum: 63 characters.
+```
+
+Example:
+
+```bash
+wifi-hotspot start --ssid "Fedora-Test" --password "FedoraTest123"
+```
+
+---
+
+# How It Works
+
+The project keeps the existing Wi-Fi connection active while creating a software access point on the same wireless PHY when supported.
+
+```text
+                         Internet
+                            │
+                    Existing Wi-Fi
+                            │
+                         wlp1s0
+                            │
+                            ▼
+                ┌─────────────────────┐
+                │    Fedora Host      │
+                │                     │
+                │  Routing            │
+                │  IPv4 forwarding    │
+                │  NAT / firewall     │
+                └──────────┬──────────┘
+                           │
+                          ap0
+                           │
+                       hostapd
+                           │
+                    Wi-Fi Access Point
+                           │
+                    ┌──────┴──────┐
+                    │             │
+                  Phone         Laptop
+```
+
+## Wireless detection
+
+The application detects:
+
+- Wi-Fi interface
+- PHY
+- Wireless driver
+- Current SSID
+- Current frequency
+- Current channel
+- AP support
+- Concurrent client + AP support
+- Channel concurrency capabilities
+- Upstream gateway
+- Source IPv4 address
+
+## AP interface
+
+A virtual interface named `ap0` is created from the wireless PHY, placed into AP mode, and assigned:
+
+```text
+10.42.0.1/24
+```
+
+This becomes the hotspot gateway.
+
+## hostapd
+
+`hostapd` manages the wireless access point, including SSID broadcasting, WPA2 authentication, AP operation, and channel configuration.
+
+## dnsmasq
+
+`dnsmasq` provides DHCP service.
+
+Default DHCP range:
+
+```text
+10.42.0.10 - 10.42.0.100
+```
+
+Hotspot gateway:
+
+```text
+10.42.0.1
+```
+
+DNS servers advertised to clients:
+
+```text
+1.1.1.1
+8.8.8.8
+```
+
+## Forwarding, NAT, and routing
+
+IPv4 forwarding allows client traffic to pass through the Fedora host. NAT allows clients to use the host's upstream Wi-Fi connection, while routing directs hotspot traffic through the active upstream interface.
+
+---
+
+# Hardware Compatibility
+
+This project depends on the wireless adapter and Linux driver.
+
+A compatible diagnostic result should contain:
+
+```text
+[✓] Managed/client mode
+[✓] Access Point mode
+[✓] Concurrent client + AP
+```
+
+However, advertised capabilities do not guarantee that every channel, channel width, or driver configuration will work.
+
+## Unsupported concurrent mode
+
+For example:
+
+```text
+[✓] Managed/client mode
+[✓] Access Point mode
+[✗] Concurrent client + AP
+```
+
+means the adapter/driver does not advertise the required simultaneous configuration.
+
+Possible alternatives:
+
+- Use a second Wi-Fi adapter
+- Use hardware with concurrent client + AP support
+- Use another compatible driver, if available
+- Use a dedicated access point
+
+---
+
+# Channel Compatibility
+
+Wireless drivers can impose restrictions on simultaneous station and AP operation.
+
+A driver may report:
+
+```text
+#channels <= 1
+```
+
+or:
+
+```text
+#channels <= 2
+```
+
+It may also report restrictions such as:
+
+```text
+STA/AP BI must match
+```
+
+or restrictions on channel widths.
+
+The current implementation uses the upstream Wi-Fi channel for the AP to improve compatibility with adapters that require station and AP operation to share a channel.
+
+Exact behavior depends on the wireless chipset and Linux driver.
+
+---
+
+# Privileges
+
+The installed command automatically requests root privileges when required.
+
+Normal usage can therefore be:
+
+```bash
+wifi-hotspot start
+```
+
+instead of:
+
+```bash
+sudo wifi-hotspot start
+```
+
+The same applies to:
+
+```bash
+wifi-hotspot stop
+wifi-hotspot status
+wifi-hotspot diagnose
+```
+
+---
+
+# Troubleshooting
+
+## Diagnose first
+
+```bash
+wifi-hotspot diagnose
+```
+
+Check for:
+
+```text
+[✓] Access Point mode
+[✓] Concurrent client + AP
+```
+
+If concurrent AP support is unavailable, the same physical adapter may not be able to remain connected to upstream Wi-Fi while providing the hotspot.
+
+## Check status
+
+```bash
+wifi-hotspot status
+```
+
+This reports:
+
+- AP interface state
+- hostapd state
+- dnsmasq state
+- IPv4 forwarding
+- NAT/firewall state
+- routing state
+- connected clients
+
+## Clean up a failed start
+
+```bash
+wifi-hotspot stop
+```
+
+Then:
+
+```bash
+iw dev
+```
+
+Normally `ap0` should not exist after a clean stop.
+
+You can also check:
+
+```bash
+ip link show ap0
+```
+
+## Inspect wireless interfaces
+
+```bash
+iw dev
+```
+
+During operation you may see:
+
+```text
+Interface ap0
+    type AP
+
+Interface wlp1s0
+    type managed
+```
+
+After stopping the hotspot, `ap0` should normally disappear.
+
+---
+
+# Security
+
+The hotspot uses WPA2-PSK through `hostapd`.
+
+Passwords must contain:
+
+- At least 8 characters
+- At most 63 characters
+
+Do not publish real hotspot passwords, Wi-Fi credentials, API keys, SSH private keys, or other sensitive information in issues, logs, screenshots, or pull requests.
+
+---
+
+# Installation Details
+
+The installer places the application under:
+
+```text
+/usr/local/lib/fedora-wifi-hotspot/
+```
+
+The system-wide command is installed at:
+
+```text
+/usr/local/sbin/wifi-hotspot
+```
+
+Supporting scripts are installed under:
+
+```text
+/usr/local/lib/fedora-wifi-hotspot/lib/
+```
+
+Temporary runtime files are stored under:
+
+```text
+/run/fedora-wifi-hotspot/
+```
+
+---
+
+# Uninstallation
+
+From the cloned repository:
+
+```bash
+sudo ./uninstall.sh
+```
+
+The uninstaller:
+
+1. Stops an active hotspot.
+2. Removes the installed application.
+3. Removes the system-wide `wifi-hotspot` command.
+4. Removes runtime hotspot state.
+
+The cloned Git repository itself is not removed.
+
+---
+
+# Project Structure
+
+```text
+fedora-wifi-hotspot/
+│
+├── wifi-hotspot
+├── install.sh
+├── uninstall.sh
+│
+├── lib/
+│   ├── detect.sh
+│   ├── network.sh
+│   ├── firewall.sh
+│   └── hotspot.sh
+│
+├── README.md
+├── LICENSE
+└── .gitignore
+```
+
+### `wifi-hotspot`
+
+Main command-line interface for argument parsing, interactive input, validation, command dispatch, privilege elevation, and hotspot lifecycle.
+
+### `lib/detect.sh`
+
+Hardware and Wi-Fi capability detection.
+
+### `lib/network.sh`
+
+Upstream network detection, gateway/source address detection, hotspot routing, policy routing, and route cleanup.
+
+### `lib/firewall.sh`
+
+IPv4 forwarding, firewall rules, NAT, and firewall cleanup.
+
+### `lib/hotspot.sh`
+
+AP interface creation/configuration, hostapd and dnsmasq configuration, service lifecycle, and AP cleanup.
+
+### `install.sh`
+
+Fedora detection, dependency installation, system-wide installation, and verification.
+
+### `uninstall.sh`
+
+System-wide application removal.
+
+---
+
+# Development
+
+Clone the repository:
+
+```bash
+git clone https://github.com/shubhamcoder260/fedora-wifi-hotspot.git
+cd fedora-wifi-hotspot
+```
+
+Run diagnostics directly from the source tree:
+
+```bash
+sudo ./wifi-hotspot diagnose
+```
+
+Test a hotspot:
+
+```bash
+sudo ./wifi-hotspot start --ssid "Fedora-Test" --password "FedoraTest123"
+```
+
+Stop it:
+
+```bash
+sudo ./wifi-hotspot stop
+```
+
+## Shell syntax checks
+
+```bash
+bash -n wifi-hotspot
+bash -n lib/detect.sh
+bash -n lib/network.sh
+bash -n lib/firewall.sh
+bash -n lib/hotspot.sh
+bash -n install.sh
+bash -n uninstall.sh
+```
+
+Each command should return exit code `0`.
+
+---
+
+# Project Status
+
+**Current release: v0.1.0**
+
+The current release has been tested for:
+
+- Automatic upstream Wi-Fi detection
+- Concurrent client + AP operation
+- Virtual AP interface creation
+- NetworkManager interaction
+- hostapd
+- dnsmasq
+- DHCP
+- IPv4 forwarding
+- NAT
+- Hotspot client connectivity
+- Status reporting
+- Clean shutdown
+- Automatic cleanup
+- System-wide installation
+- System-wide uninstallation
+- Interactive configuration
+- Command-line configuration
+- Hardware diagnostics
+
+Testing across additional Fedora systems, wireless chipsets, and driver combinations is ongoing.
+
+This is an early release and does not guarantee compatibility with every Fedora wireless adapter.
+
+---
+
+# Roadmap
+
+Potential future improvements:
+
+- Broader wireless chipset testing
+- Driver-specific compatibility handling
+- Improved error recovery
+- More robust firewall backend handling
+- IPv6 support
+- Configurable DHCP ranges
+- Configuration file support
+- Additional Fedora version testing
+- Fedora RPM packaging
+- COPR distribution
+- Automated integration testing
+- Expanded hardware compatibility reporting
+- More detailed diagnostics
+
+---
+
+# Contributing
+
+Contributions, bug reports, hardware compatibility reports, and improvements are welcome.
+
+When reporting a hardware compatibility issue, include:
+
+```bash
+wifi-hotspot diagnose
+```
+
+and, if the hotspot was started:
+
+```bash
+wifi-hotspot status
+```
+
+Useful additional information:
+
+```bash
+iw dev
+ip -4 route
+```
+
+Do not include passwords, private credentials, API keys, SSH private keys, or other sensitive information.
+
+---
+
+# License
+
+This project is licensed under the terms provided in [LICENSE](LICENSE).
+
+---
+
+# Repository
+
+https://github.com/shubhamcoder260/fedora-wifi-hotspot

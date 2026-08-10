@@ -1,0 +1,21 @@
+# Runtime files
+/run/
+/tmp/
+
+# Generated hotspot state
+*.pid
+*.log
+
+# Editor files
+*~
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+core
+core.*
+*.core

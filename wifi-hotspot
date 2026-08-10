@@ -1,0 +1,658 @@
+#!/usr/bin/env bash
+
+# Automatically request root privileges when required.
+if [ "$EUID" -ne 0 ]; then
+    exec sudo "$0" "$@"
+fi
+
+set -u
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ============================================================
+# Load modules
+# ============================================================
+
+source "$PROJECT_DIR/lib/detect.sh"
+source "$PROJECT_DIR/lib/network.sh"
+source "$PROJECT_DIR/lib/firewall.sh"
+source "$PROJECT_DIR/lib/hotspot.sh"
+
+
+# ============================================================
+# Configuration
+# ============================================================
+
+AP_INTERFACE="ap0"
+
+HOTSPOT_ADDRESS="10.42.0.1/24"
+HOTSPOT_GATEWAY="10.42.0.1"
+HOTSPOT_SUBNET="10.42.0.0/24"
+
+DHCP_START="10.42.0.10"
+DHCP_END="10.42.0.100"
+SUBNET_MASK="255.255.255.0"
+
+
+# ============================================================
+# Helpers
+# ============================================================
+
+die() {
+    echo
+    echo "[✗] $1"
+    echo
+    exit 1
+}
+
+
+require_root() {
+    if [ "$EUID" -ne 0 ]; then
+        die "This command requires root. Use sudo."
+    fi
+}
+
+
+usage() {
+    cat <<EOF2
+
+Fedora Wi-Fi Hotspot
+====================
+
+Usage:
+
+  sudo ./wifi-hotspot start
+  sudo ./wifi-hotspot start --ssid "My Hotspot" --password "MyPassword123"
+
+  sudo ./wifi-hotspot stop
+  sudo ./wifi-hotspot status
+  sudo ./wifi-hotspot diagnose
+
+Options:
+
+  --ssid NAME
+        Hotspot name.
+
+  --password PASSWORD
+        WPA2 password. Minimum 8 characters.
+
+Commands:
+
+  start
+        Start the Wi-Fi hotspot.
+
+  stop
+        Stop the Wi-Fi hotspot.
+
+  status
+        Show hotspot status.
+
+  diagnose
+        Detect Wi-Fi hardware and upstream network.
+
+  help
+        Show this help.
+
+EOF2
+}
+
+
+validate_ssid() {
+    local ssid="$1"
+
+    if [ -z "$ssid" ]; then
+        die "SSID cannot be empty."
+    fi
+
+    if [ "${#ssid}" -gt 32 ]; then
+        die "SSID cannot exceed 32 characters."
+    fi
+}
+
+
+validate_password() {
+    local password="$1"
+
+    if [ "${#password}" -lt 8 ]; then
+        die "Password must contain at least 8 characters."
+    fi
+
+    if [ "${#password}" -gt 63 ]; then
+        die "Password cannot exceed 63 characters."
+    fi
+}
+
+
+# ============================================================
+# Cleanup helper
+# ============================================================
+
+cleanup_start_failure() {
+
+    echo
+    echo "[*] Cleaning up..."
+
+    stop_dnsmasq 2>/dev/null || true
+    stop_hostapd 2>/dev/null || true
+
+    firewall_cleanup 2>/dev/null || true
+
+    cleanup_hotspot_routing "$HOTSPOT_SUBNET" 2>/dev/null || true
+
+    remove_ap_interface "$AP_INTERFACE" 2>/dev/null || true
+
+    echo "[✓] Cleanup complete."
+}
+
+
+# ============================================================
+# Parse arguments
+# ============================================================
+
+COMMAND=""
+SSID=""
+PASSWORD=""
+
+while [ "$#" -gt 0 ]; do
+
+    case "$1" in
+
+        start|stop|status|diagnose|help)
+            COMMAND="$1"
+            shift
+            ;;
+
+        --ssid)
+            [ "$#" -ge 2 ] || die "--ssid requires a value."
+            SSID="$2"
+            shift 2
+            ;;
+
+        --password)
+            [ "$#" -ge 2 ] || die "--password requires a value."
+            PASSWORD="$2"
+            shift 2
+            ;;
+
+        -h|--help)
+            usage
+            exit 0
+            ;;
+
+        *)
+            die "Unknown argument: $1"
+            ;;
+
+    esac
+
+done
+
+
+if [ -z "$COMMAND" ]; then
+    usage
+    exit 1
+fi
+
+
+# ============================================================
+# HELP
+# ============================================================
+
+if [ "$COMMAND" = "help" ]; then
+    usage
+    exit 0
+fi
+
+
+# ============================================================
+# DIAGNOSE
+# ============================================================
+
+if [ "$COMMAND" = "diagnose" ]; then
+
+    require_root
+
+    print_diagnostics
+
+    echo
+
+    print_network_diagnostics
+
+    exit $?
+
+fi
+
+
+# ============================================================
+# START
+# ============================================================
+
+if [ "$COMMAND" = "start" ]; then
+
+    require_root
+
+    echo
+    echo "=========================================="
+    echo "         Fedora Wi-Fi Hotspot"
+    echo "=========================================="
+    echo
+
+
+    # --------------------------------------------------------
+    # Get SSID
+    # --------------------------------------------------------
+
+    if [ -z "$SSID" ]; then
+        read -r -p "Hotspot name: " SSID
+    fi
+
+    validate_ssid "$SSID"
+
+
+    # --------------------------------------------------------
+    # Get password
+    # --------------------------------------------------------
+
+    if [ -z "$PASSWORD" ]; then
+        read -r -s -p "Hotspot password: " PASSWORD
+        echo
+    fi
+
+    validate_password "$PASSWORD"
+
+
+    echo "[✓] SSID accepted."
+    echo "[✓] Password accepted."
+
+
+    # --------------------------------------------------------
+    # Detect upstream Wi-Fi
+    # --------------------------------------------------------
+
+    UPSTREAM="$(detect_wifi_upstream || true)"
+
+    if [ -z "$UPSTREAM" ]; then
+        die "Could not find a connected Wi-Fi interface providing the default Internet route."
+    fi
+
+    echo "[✓] Upstream Wi-Fi: $UPSTREAM"
+
+
+    # --------------------------------------------------------
+    # Verify upstream connection
+    # --------------------------------------------------------
+
+    if ! verify_upstream_connection "$UPSTREAM"; then
+        die "Upstream Wi-Fi is not currently connected."
+    fi
+
+    echo "[✓] Upstream Wi-Fi connection verified."
+
+
+    # --------------------------------------------------------
+    # Detect PHY
+    # --------------------------------------------------------
+
+    PHY="$(detect_phy "$UPSTREAM")"
+
+    if [ -z "$PHY" ]; then
+        die "Could not determine Wi-Fi PHY."
+    fi
+
+    echo "[✓] PHY: $PHY"
+
+
+    # --------------------------------------------------------
+    # Check AP capability
+    # --------------------------------------------------------
+
+    if ! supports_ap "$PHY"; then
+        die "This Wi-Fi adapter does not advertise AP mode."
+    fi
+
+    echo "[✓] AP mode supported."
+
+
+    # --------------------------------------------------------
+    # Check concurrent STA + AP
+    # --------------------------------------------------------
+
+    if ! supports_concurrent_sta_ap "$PHY"; then
+        die "This Wi-Fi adapter/driver does not advertise simultaneous client + AP operation."
+    fi
+
+    echo "[✓] Concurrent client + AP supported."
+
+
+    # --------------------------------------------------------
+    # Determine upstream channel
+    # --------------------------------------------------------
+
+    CHANNEL="$(get_upstream_channel "$UPSTREAM")"
+    FREQUENCY="$(get_upstream_frequency "$UPSTREAM")"
+
+    if [ -z "$CHANNEL" ]; then
+        die "Could not determine upstream Wi-Fi channel."
+    fi
+
+    if [ -z "$FREQUENCY" ]; then
+        die "Could not determine upstream Wi-Fi frequency."
+    fi
+
+    echo "[✓] Upstream channel: $CHANNEL"
+    echo "[✓] Upstream frequency: $FREQUENCY MHz"
+
+
+    # --------------------------------------------------------
+    # Select hostapd band
+    # --------------------------------------------------------
+
+    if [ "$FREQUENCY" -lt 3000 ]; then
+        HW_MODE="g"
+    else
+        HW_MODE="a"
+    fi
+
+    echo "[✓] AP band: $HW_MODE"
+
+
+    # --------------------------------------------------------
+    # Determine upstream gateway
+    # --------------------------------------------------------
+
+    GATEWAY="$(detect_default_gateway)"
+
+    if [ -z "$GATEWAY" ]; then
+        die "Could not determine upstream gateway."
+    fi
+
+    echo "[✓] Upstream gateway: $GATEWAY"
+
+
+    # --------------------------------------------------------
+    # Create AP interface
+    # --------------------------------------------------------
+
+    if ! create_ap_interface "$PHY" "$AP_INTERFACE"; then
+        die "Failed to create AP interface."
+    fi
+
+
+    # --------------------------------------------------------
+    # Configure AP address
+    # --------------------------------------------------------
+
+    if ! configure_ap_interface \
+        "$AP_INTERFACE" \
+        "$HOTSPOT_ADDRESS"
+    then
+        cleanup_start_failure
+        die "Failed to configure AP interface."
+    fi
+
+
+    # --------------------------------------------------------
+    # Enable IPv4 forwarding
+    # --------------------------------------------------------
+
+    if ! sysctl -w net.ipv4.ip_forward=1 >/dev/null; then
+        cleanup_start_failure
+        die "Could not enable IPv4 forwarding."
+    fi
+
+    echo "[✓] IPv4 forwarding enabled."
+
+
+    # --------------------------------------------------------
+    # Configure policy routing
+    # --------------------------------------------------------
+
+    if ! setup_hotspot_routing \
+        "$AP_INTERFACE" \
+        "$UPSTREAM" \
+        "$GATEWAY" \
+        "$HOTSPOT_SUBNET"
+    then
+        cleanup_start_failure
+        die "Failed to configure hotspot routing."
+    fi
+
+
+    # --------------------------------------------------------
+    # Verify policy routing
+    # --------------------------------------------------------
+
+    if ! verify_hotspot_route \
+        "$AP_INTERFACE" \
+        "$UPSTREAM" \
+        "10.42.0.33"
+    then
+        cleanup_start_failure
+        die "Hotspot traffic is not routing through the upstream Wi-Fi interface."
+    fi
+
+
+    # --------------------------------------------------------
+    # Configure firewall / NAT
+    # --------------------------------------------------------
+
+    if ! firewall_setup \
+        "$AP_INTERFACE" \
+        "$UPSTREAM" \
+        "$HOTSPOT_SUBNET"
+    then
+        cleanup_start_failure
+        die "Failed to configure firewall/NAT."
+    fi
+
+
+    # --------------------------------------------------------
+    # Generate hostapd configuration
+    # --------------------------------------------------------
+
+    if ! generate_hostapd_config \
+        "$AP_INTERFACE" \
+        "$SSID" \
+        "$PASSWORD" \
+        "$HW_MODE" \
+        "$CHANNEL"
+    then
+        cleanup_start_failure
+        die "Failed to generate hostapd configuration."
+    fi
+
+
+    # --------------------------------------------------------
+    # Generate dnsmasq configuration
+    # --------------------------------------------------------
+
+    if ! generate_dnsmasq_config \
+        "$AP_INTERFACE" \
+        "$HOTSPOT_GATEWAY" \
+        "$DHCP_START" \
+        "$DHCP_END" \
+        "$SUBNET_MASK"
+    then
+        cleanup_start_failure
+        die "Failed to generate dnsmasq configuration."
+    fi
+
+
+    # --------------------------------------------------------
+    # Start hostapd
+    # --------------------------------------------------------
+
+    if ! start_hostapd; then
+        cleanup_start_failure
+        die "Failed to start hostapd."
+    fi
+
+
+    # --------------------------------------------------------
+    # Start dnsmasq
+    # --------------------------------------------------------
+
+    if ! start_dnsmasq; then
+        cleanup_start_failure
+        die "Failed to start dnsmasq."
+    fi
+
+
+    # --------------------------------------------------------
+    # Final status
+    # --------------------------------------------------------
+
+    echo
+    echo "=========================================="
+    echo "             HOTSPOT READY"
+    echo "=========================================="
+    echo
+    echo "SSID:       $SSID"
+    echo "Password:   $PASSWORD"
+    echo "Interface:  $AP_INTERFACE"
+    echo "Gateway:    $HOTSPOT_GATEWAY"
+    echo "Channel:    $CHANNEL"
+    echo
+    echo "Connect your device to:"
+    echo
+    echo "    $SSID"
+    echo
+
+    exit 0
+fi
+
+
+# ============================================================
+# STOP
+# ============================================================
+
+if [ "$COMMAND" = "stop" ]; then
+
+    require_root
+
+    echo
+    echo "=========================================="
+    echo "          Stopping Wi-Fi Hotspot"
+    echo "=========================================="
+    echo
+
+    stop_dnsmasq
+    stop_hostapd
+
+    firewall_cleanup
+
+    cleanup_hotspot_routing "$HOTSPOT_SUBNET"
+
+    remove_ap_interface "$AP_INTERFACE"
+
+    echo
+    echo "[✓] Hotspot stopped."
+    echo
+
+    exit 0
+fi
+
+
+# ============================================================
+# STATUS
+# ============================================================
+
+if [ "$COMMAND" = "status" ]; then
+
+    require_root
+
+    echo
+    echo "=========================================="
+    echo "       Wi-Fi Hotspot Status"
+    echo "=========================================="
+    echo
+
+
+    # --------------------------------------------------------
+    # AP interface
+    # --------------------------------------------------------
+
+    if iw dev "$AP_INTERFACE" info >/dev/null 2>&1; then
+        echo "[✓] AP interface: $AP_INTERFACE"
+    else
+        echo "[✗] AP interface: $AP_INTERFACE"
+    fi
+
+
+    # --------------------------------------------------------
+    # hostapd
+    # --------------------------------------------------------
+
+    if [ -f "$HOSTAPD_PID" ] &&
+       kill -0 "$(cat "$HOSTAPD_PID" 2>/dev/null)" 2>/dev/null
+    then
+        echo "[✓] hostapd: running"
+    else
+        echo "[✗] hostapd: stopped"
+    fi
+
+
+    # --------------------------------------------------------
+    # dnsmasq
+    # --------------------------------------------------------
+
+    if [ -f "$DNSMASQ_PID" ] &&
+       kill -0 "$(cat "$DNSMASQ_PID" 2>/dev/null)" 2>/dev/null
+    then
+        echo "[✓] dnsmasq: running"
+    else
+        echo "[✗] dnsmasq: stopped"
+    fi
+
+
+    # --------------------------------------------------------
+    # IPv4 forwarding
+    # --------------------------------------------------------
+
+    if [ "$(cat /proc/sys/net/ipv4/ip_forward 2>/dev/null)" = "1" ]; then
+        echo "[✓] IPv4 forwarding: enabled"
+    else
+        echo "[✗] IPv4 forwarding: disabled"
+    fi
+
+
+    # --------------------------------------------------------
+    # Firewall/NAT
+    # --------------------------------------------------------
+
+    firewall_status
+
+
+    # --------------------------------------------------------
+    # Routing
+    # --------------------------------------------------------
+
+    if [ -f "$HOTSPOT_ROUTE_STATE" ]; then
+        echo "[✓] Policy routing: configured"
+    else
+        echo "[✗] Policy routing: not configured"
+    fi
+
+
+    # --------------------------------------------------------
+    # Connected clients
+    # --------------------------------------------------------
+
+    if iw dev "$AP_INTERFACE" info >/dev/null 2>&1; then
+
+        CLIENTS="$(
+            iw dev "$AP_INTERFACE" station dump 2>/dev/null |
+                grep -c '^Station ' || true
+        )"
+
+        echo "[✓] Connected clients: $CLIENTS"
+
+    fi
+
+    echo
+
+    exit 0
+fi
+
+
+die "Unknown command: $COMMAND"

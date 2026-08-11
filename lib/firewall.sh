@@ -16,6 +16,10 @@ firewall_setup() {
 
     echo "[*] Configuring firewall/NAT..."
 
+    if systemctl is-active --quiet firewalld 2>/dev/null; then
+        firewall-cmd --zone=trusted --add-interface="$ap" >/dev/null 2>&1 || true
+    fi
+
     # Remove an old copy of our own table.
     nft delete table ip "$HOTSPOT_TABLE" 2>/dev/null || true
 
@@ -45,6 +49,10 @@ firewall_setup() {
 firewall_cleanup() {
 
     echo "[*] Removing hotspot firewall rules..."
+    
+    if systemctl is-active --quiet firewalld 2>/dev/null; then
+        firewall-cmd --zone=trusted --remove-interface="ap0" >/dev/null 2>&1 || true
+    fi
 
     nft delete table ip "$HOTSPOT_TABLE" 2>/dev/null || true
 

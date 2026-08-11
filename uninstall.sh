@@ -28,6 +28,8 @@ echo "[*] Removing application..."
 rm -rf "$INSTALL_DIR"
 rm -f "$BIN"
 rm -rf /run/fedora-wifi-hotspot
+rm -f /usr/share/applications/fedora-wifi-hotspot.desktop
+rm -f /etc/sudoers.d/fedora-wifi-hotspot
 
 echo
 echo "[✓] Fedora Wi-Fi Hotspot removed."

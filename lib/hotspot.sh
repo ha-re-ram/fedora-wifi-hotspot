@@ -42,6 +42,12 @@ create_ap_interface() {
     # Interface must be down before changing its wireless type.
     ip link set "$ap" down 2>/dev/null || true
 
+    # Assign a random locally administered MAC address to avoid conflicts
+    # ("RTNETLINK answers: Name not unique on network") with the upstream interface.
+    local mac
+    mac=$(printf '02:%02x:%02x:%02x:%02x:%02x' $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)))
+    ip link set dev "$ap" address "$mac" 2>/dev/null || true
+
     # Explicitly force AP mode.
     if ! iw dev "$ap" set type __ap; then
         echo "[✗] Failed to set $ap to AP mode."
@@ -109,6 +115,10 @@ generate_hostapd_config() {
     local hw_mode="$4"
     local channel="$5"
 
+    local country
+    country="$(iw reg get 2>/dev/null | grep ^country | awk '{print $2}' | sed 's/://' | head -n1)"
+    [ -z "$country" ] || [ "$country" = "00" ] && country="US"
+
     mkdir -p "$HOTSPOT_CONFIG_DIR"
 
     cat > "$HOSTAPD_CONF" <<EOF2
@@ -118,6 +128,10 @@ driver=nl80211
 ssid=$ssid
 hw_mode=$hw_mode
 channel=$channel
+
+ieee80211d=1
+ieee80211h=1
+country_code=$country
 
 auth_algs=1
 
@@ -149,6 +163,7 @@ generate_dnsmasq_config() {
 
     cat > "$DNSMASQ_CONF" <<EOF2
 interface=$ap
+bind-dynamic
 port=0
 
 dhcp-range=$start_ip,$end_ip,$subnet_mask,12h

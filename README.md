@@ -65,7 +65,22 @@ After installation, `wifi-hotspot` is available from any directory.
 
 # Quick Start
 
-## 1. Diagnose your hardware
+## Graphical User Interface (GUI)
+
+The installer includes a modern, native Fedora GUI!
+
+To launch it:
+1. Open your Fedora Application Launcher (press the Super/Windows key).
+2. Search for **"Fedora Wi-Fi Hotspot"**.
+3. Click the icon to launch the app!
+
+From the GUI, you can instantly turn the hotspot on/off, set the SSID/password, and view connected devices without touching the terminal. 
+
+*Note: For passwordless execution, the installer automatically grants the `wheel` (administrator) group NOPASSWD access to the backend hotspot script in your `sudoers` config.*
+
+## Command Line Interface
+
+### 1. Diagnose your hardware
 
 ```bash
 wifi-hotspot diagnose
@@ -288,6 +303,12 @@ Possible alternatives:
 - Use hardware with concurrent client + AP support
 - Use another compatible driver, if available
 - Use a dedicated access point
+
+## DFS Channel Restrictions (Radar Detection)
+
+If your laptop is connected to a 5GHz DFS channel (e.g. Channel 116), you may encounter a `DFS start_dfs_cac() failed, -1` error when starting the hotspot. 
+By law, any device broadcasting on these channels must be able to scan for radar signals (DFS Master mode). Most client Wi-Fi cards lack the hardware capability or legal certification to perform radar detection. 
+Because single-radio cards cannot broadcast on a different channel than the one they are connected to, the **only physical solution** is to connect your laptop to a 2.4GHz network, a non-DFS 5GHz network, or use an Ethernet connection for your internet.
 
 ---
 
@@ -608,6 +629,7 @@ This is an early release and does not guarantee compatibility with every Fedora 
 
 Potential future improvements:
 
+- **Web UI Dashboard**: A planned web-based dashboard (using Node.js/Vite) to manage your hotspot from any connected device!
 - Broader wireless chipset testing
 - Driver-specific compatibility handling
 - Improved error recovery

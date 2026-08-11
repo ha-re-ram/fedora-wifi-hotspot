@@ -79,13 +79,15 @@ mkdir -p "$INSTALL_DIR/lib"
 # ------------------------------------------------------------
 
 cp wifi-hotspot "$INSTALL_DIR/wifi-hotspot"
+cp wifi-hotspot-gui "$INSTALL_DIR/wifi-hotspot-gui"
 cp lib/*.sh "$INSTALL_DIR/lib/"
 
 chmod +x "$INSTALL_DIR/wifi-hotspot"
+chmod +x "$INSTALL_DIR/wifi-hotspot-gui"
 chmod +x "$INSTALL_DIR/lib/"*.sh
 
 # ------------------------------------------------------------
-# Install launcher
+# Install launcher & Desktop File
 # ------------------------------------------------------------
 
 cat > "$BIN" <<'EOF'
@@ -95,6 +97,24 @@ exec /usr/local/lib/fedora-wifi-hotspot/wifi-hotspot "$@"
 EOF
 
 chmod +x "$BIN"
+
+cat > /usr/share/applications/fedora-wifi-hotspot.desktop <<EOF
+[Desktop Entry]
+Name=Fedora Wi-Fi Hotspot
+Comment=Create and manage a Wi-Fi Hotspot
+Exec=$INSTALL_DIR/wifi-hotspot-gui
+Icon=network-wireless-symbolic
+Terminal=false
+Type=Application
+Categories=Settings;Network;
+Keywords=wifi;hotspot;network;
+StartupNotify=true
+EOF
+
+# Grant passwordless sudo to wheel group for the backend script
+echo "%wheel ALL=(root) NOPASSWD: $INSTALL_DIR/wifi-hotspot" > /etc/sudoers.d/fedora-wifi-hotspot
+chmod 440 /etc/sudoers.d/fedora-wifi-hotspot
+
 
 # ------------------------------------------------------------
 # Verify installation

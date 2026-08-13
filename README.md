@@ -9,6 +9,10 @@
 
 <br>
 
+**Keywords / SEO**: `Fedora Wi-Fi Hotspot`, `Linux Access Point`, `Create Hotspot Fedora`, `Share Wi-Fi Linux`, `Concurrent AP Client`, `hostapd GUI`, `dnsmasq GUI`, `GNOME Wi-Fi Hotspot`.
+
+> **Tip for Repo Owner**: Don't forget to add these tags in your GitHub repository's "About" section topics: `fedora`, `wifi-hotspot`, `linux-networking`, `gtk3-python`, `access-point`.
+
 `fedora-wifi-hotspot` empowers your Fedora system to share its existing Wi-Fi or Ethernet internet connection through a software access point (hotspot) using your wireless adapter.
 
 With the brand-new **Native GNOME GUI**, managing your hotspot has never been easier or more beautiful!
@@ -19,7 +23,7 @@ With the brand-new **Native GNOME GUI**, managing your hotspot has never been ea
   <h3>✨ The Modern GUI ✨</h3>
   <!-- ADD YOUR GUI SCREENSHOT IMAGE HERE -->
   <img src="./assets/gui_screenshot.png" alt="Fedora Wi-Fi Hotspot GUI Screenshot" width="600">
-  <p><i>(Add your screenshot image to an <code>assets</code> folder and update the path above!)</i></p>
+  
 </div>
 
 ---

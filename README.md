@@ -1,684 +1,125 @@
-# Fedora Wi-Fi Hotspot
+<div align="center">
+  <h1>🚀 Fedora Wi-Fi Hotspot</h1>
+  <p><b>A powerful, lightweight, and modern Wi-Fi hotspot tool for Fedora Linux.</b></p>
+  
+  ![Fedora Version](https://img.shields.io/badge/Fedora-38%2B-blue?style=for-the-badge&logo=fedora)
+  ![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
+  ![Contributions](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg?style=for-the-badge)
+</div>
 
-A lightweight command-line Wi-Fi hotspot tool for Fedora Linux.
+<br>
 
-`fedora-wifi-hotspot` lets a Fedora system share its existing Wi-Fi connection through a software access point using the same wireless adapter, when the adapter and Linux driver support concurrent client + AP operation.
+`fedora-wifi-hotspot` empowers your Fedora system to share its existing Wi-Fi or Ethernet internet connection through a software access point (hotspot) using your wireless adapter.
 
-## Features
-
-- Automatic Wi-Fi interface, PHY, driver, channel, frequency, and upstream network detection
-- Access Point and concurrent client + AP capability detection
-- Virtual AP interface creation with NetworkManager-aware setup
-- WPA2 access point through `hostapd`
-- DHCP through `dnsmasq`
-- IPv4 forwarding, NAT, firewall, and hotspot routing
-- Automatic cleanup on stop and failure
-- Interactive or command-line SSID/password configuration
-- Hardware diagnostics and hotspot status reporting
-- System-wide installation and uninstallation
-- Automatic privilege elevation
-
-## Requirements
-
-### Operating system
-
-- Fedora Linux
-
-### Required packages
-
-The installer checks and installs:
-
-- NetworkManager
-- iproute
-- iptables-nft
-- iw
-- hostapd
-- dnsmasq
-
-### Wireless hardware
-
-The wireless adapter and Linux driver must support:
-
-- Managed/client mode
-- Access Point mode
-- Concurrent client + AP operation
-
-Not every Wi-Fi adapter supports this configuration.
+With the brand-new **Native GNOME GUI**, managing your hotspot has never been easier or more beautiful!
 
 ---
 
-# Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/shubhamcoder260/fedora-wifi-hotspot.git
-cd fedora-wifi-hotspot
-sudo ./install.sh
-```
-
-The installer verifies Fedora, installs missing dependencies, installs the application system-wide, and verifies the installation.
-
-After installation, `wifi-hotspot` is available from any directory.
+<div align="center">
+  <h3>✨ The Modern GUI ✨</h3>
+  <!-- ADD YOUR GUI SCREENSHOT IMAGE HERE -->
+  <img src="./assets/gui_screenshot.png" alt="Fedora Wi-Fi Hotspot GUI Screenshot" width="600">
+  <p><i>(Add your screenshot image to an <code>assets</code> folder and update the path above!)</i></p>
+</div>
 
 ---
 
-# Quick Start
+## 🌟 Key Features
 
-## Graphical User Interface (GUI)
+- **Beautiful Native GUI**: A fully-fledged GTK GNOME application built specifically for Fedora, featuring one-click toggles and real-time connection monitoring.
+- **Concurrent Client + AP**: Share your Wi-Fi connection using the *same* wireless adapter without dropping your internet connection (hardware permitting).
+- **Passwordless Execution**: Securely integrates with `sudoers` and `pkexec` so you never have to type your password to start the hotspot.
+- **Smart Hardware Detection**: Automatically detects Wi-Fi interfaces, PHY, driver capabilities, channel, and frequency.
+- **Rock-Solid Backend**: Powered by `hostapd` for WPA2 security, `dnsmasq` for rapid DHCP IP allocation, and `nftables` for secure firewall routing and NAT.
 
-The installer includes a modern, native Fedora GUI!
+---
 
-To launch it:
-1. Open your Fedora Application Launcher (press the Super/Windows key).
+## 🛠️ Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/ha-re-ram/fedora-wifi-hotspot.git
+   cd fedora-wifi-hotspot
+   ```
+
+2. **Run the Installer:**
+   ```bash
+   sudo ./install.sh
+   ```
+
+The automated installer will download all required dependencies (`hostapd`, `dnsmasq`, etc.), install the command-line tool, copy the GUI into your system applications, and configure passwordless access.
+
+---
+
+## 🚀 How to Use
+
+### Method 1: The Graphical Interface (Recommended)
+1. Press the **Super (Windows) key** to open your Fedora Application Launcher.
 2. Search for **"Fedora Wi-Fi Hotspot"**.
-3. Click the icon to launch the app!
+3. Launch the app! 
+4. Configure your Network Name (SSID) and Password, and simply flip the switch to turn the hotspot on.
 
-From the GUI, you can instantly turn the hotspot on/off, set the SSID/password, and view connected devices without touching the terminal. 
+### Method 2: Command Line (CLI)
+You can also run everything directly from the terminal from anywhere on your system.
 
-*Note: For passwordless execution, the installer automatically grants the `wheel` (administrator) group NOPASSWD access to the backend hotspot script in your `sudoers` config.*
-
-## Command Line Interface
-
-### 1. Diagnose your hardware
-
-```bash
-wifi-hotspot diagnose
-```
-
-A compatible system should report:
-
-```text
-[✓] Managed/client mode
-[✓] Access Point mode
-[✓] Concurrent client + AP
-```
-
-## 2. Start the hotspot
-
-Interactive mode:
-
-```bash
-wifi-hotspot start
-```
-
-You will be asked for:
-
-```text
-Hotspot name:
-Hotspot password:
-```
-
-The password must contain 8 to 63 characters.
-
-Or specify them directly:
-
+**Start the hotspot:**
 ```bash
 wifi-hotspot start --ssid "My Hotspot" --password "MyPassword123"
 ```
 
-## 3. Connect your devices
-
-Connect your phone, laptop, tablet, or other Wi-Fi device to the selected SSID.
-
-The hotspot automatically provides DHCP addressing and routes client traffic through the host's existing Wi-Fi connection.
-
-## 4. Check status
-
+**Check the status:**
 ```bash
 wifi-hotspot status
 ```
 
-Example:
-
-```text
-[✓] AP interface: ap0
-[✓] hostapd: running
-[✓] dnsmasq: running
-[✓] IPv4 forwarding: enabled
-[✓] Hotspot firewall/NAT: active
-[✓] Policy routing: configured
-[✓] Connected clients: 1
-```
-
-## 5. Stop the hotspot
-
+**Stop the hotspot:**
 ```bash
 wifi-hotspot stop
 ```
 
-This removes the AP interface, routing configuration, firewall/NAT rules, and hotspot services.
+---
+
+## ⚠️ Hardware Limitations & DFS Channels
+
+Not every Wi-Fi adapter is physically capable of broadcasting a hotspot while simultaneously connected to a Wi-Fi network.
+
+### The Radar Restriction (`DFS start_dfs_cac() failed, -1`)
+If you are connected to a 5GHz DFS channel (e.g. Channel 116), you may encounter a failure when starting the hotspot. By international law, devices broadcasting on DFS channels must actively scan for weather/military radar (DFS Master mode). Most consumer Wi-Fi cards physically lack this hardware certification. 
+
+Because single-radio cards cannot broadcast on a different channel than the one they are connected to, the **only physical solutions** are:
+1. Connect your laptop's main Wi-Fi to a **2.4GHz network** or a non-DFS 5GHz network.
+2. Plug your laptop into the internet via an **Ethernet cable**, completely freeing up the Wi-Fi radio.
 
 ---
 
-# Commands
+## 🗺️ Roadmap
 
-| Command | Description |
-|---|---|
-| `wifi-hotspot start` | Start the hotspot |
-| `wifi-hotspot stop` | Stop the hotspot |
-| `wifi-hotspot status` | Show hotspot status |
-| `wifi-hotspot diagnose` | Detect Wi-Fi hardware and network capabilities |
-| `wifi-hotspot help` | Show command help |
-
-## Start options
-
-```text
---ssid NAME
-    Set the hotspot name.
-
---password PASSWORD
-    Set the WPA2 password.
-    Minimum: 8 characters.
-    Maximum: 63 characters.
-```
-
-Example:
-
-```bash
-wifi-hotspot start --ssid "Fedora-Test" --password "FedoraTest123"
-```
+- [x] Create a native Fedora GTK GUI.
+- [x] Implement robust background process handling.
+- [ ] **Web UI Dashboard**: A planned web-based dashboard (using Node.js/Vite) to manage your hotspot remotely from any connected device!
+- [ ] Expanded hardware compatibility reporting and bypasses.
 
 ---
 
-# How It Works
+## 🤝 Contributing
 
-The project keeps the existing Wi-Fi connection active while creating a software access point on the same wireless PHY when supported.
+We welcome all contributions! Whether it's adding new features, fixing bugs, or improving documentation, we'd love your help.
 
-```text
-                         Internet
-                            │
-                    Existing Wi-Fi
-                            │
-                         wlp1s0
-                            │
-                            ▼
-                ┌─────────────────────┐
-                │    Fedora Host      │
-                │                     │
-                │  Routing            │
-                │  IPv4 forwarding    │
-                │  NAT / firewall     │
-                └──────────┬──────────┘
-                           │
-                          ap0
-                           │
-                       hostapd
-                           │
-                    Wi-Fi Access Point
-                           │
-                    ┌──────┴──────┐
-                    │             │
-                  Phone         Laptop
-```
+1. **Fork** the repository on GitHub.
+2. **Clone** your fork locally.
+3. **Create a branch** for your feature (`git checkout -b feature/AmazingFeature`).
+4. **Commit** your changes (`git commit -m 'Add some AmazingFeature'`).
+5. **Push** to the branch (`git push origin feature/AmazingFeature`).
+6. **Open a Pull Request**!
 
-## Wireless detection
-
-The application detects:
-
-- Wi-Fi interface
-- PHY
-- Wireless driver
-- Current SSID
-- Current frequency
-- Current channel
-- AP support
-- Concurrent client + AP support
-- Channel concurrency capabilities
-- Upstream gateway
-- Source IPv4 address
-
-## AP interface
-
-A virtual interface named `ap0` is created from the wireless PHY, placed into AP mode, and assigned:
-
-```text
-10.42.0.1/24
-```
-
-This becomes the hotspot gateway.
-
-## hostapd
-
-`hostapd` manages the wireless access point, including SSID broadcasting, WPA2 authentication, AP operation, and channel configuration.
-
-## dnsmasq
-
-`dnsmasq` provides DHCP service.
-
-Default DHCP range:
-
-```text
-10.42.0.10 - 10.42.0.100
-```
-
-Hotspot gateway:
-
-```text
-10.42.0.1
-```
-
-DNS servers advertised to clients:
-
-```text
-1.1.1.1
-8.8.8.8
-```
-
-## Forwarding, NAT, and routing
-
-IPv4 forwarding allows client traffic to pass through the Fedora host. NAT allows clients to use the host's upstream Wi-Fi connection, while routing directs hotspot traffic through the active upstream interface.
+When reporting bugs, please include the output of `wifi-hotspot diagnose` and `iw dev` (make sure to hide any sensitive passwords!).
 
 ---
 
-# Hardware Compatibility
+## 📝 License
 
-This project depends on the wireless adapter and Linux driver.
+This project is licensed under the [MIT License](LICENSE).
 
-A compatible diagnostic result should contain:
-
-```text
-[✓] Managed/client mode
-[✓] Access Point mode
-[✓] Concurrent client + AP
-```
-
-However, advertised capabilities do not guarantee that every channel, channel width, or driver configuration will work.
-
-## Unsupported concurrent mode
-
-For example:
-
-```text
-[✓] Managed/client mode
-[✓] Access Point mode
-[✗] Concurrent client + AP
-```
-
-means the adapter/driver does not advertise the required simultaneous configuration.
-
-Possible alternatives:
-
-- Use a second Wi-Fi adapter
-- Use hardware with concurrent client + AP support
-- Use another compatible driver, if available
-- Use a dedicated access point
-
-## DFS Channel Restrictions (Radar Detection)
-
-If your laptop is connected to a 5GHz DFS channel (e.g. Channel 116), you may encounter a `DFS start_dfs_cac() failed, -1` error when starting the hotspot. 
-By law, any device broadcasting on these channels must be able to scan for radar signals (DFS Master mode). Most client Wi-Fi cards lack the hardware capability or legal certification to perform radar detection. 
-Because single-radio cards cannot broadcast on a different channel than the one they are connected to, the **only physical solution** is to connect your laptop to a 2.4GHz network, a non-DFS 5GHz network, or use an Ethernet connection for your internet.
-
----
-
-# Channel Compatibility
-
-Wireless drivers can impose restrictions on simultaneous station and AP operation.
-
-A driver may report:
-
-```text
-#channels <= 1
-```
-
-or:
-
-```text
-#channels <= 2
-```
-
-It may also report restrictions such as:
-
-```text
-STA/AP BI must match
-```
-
-or restrictions on channel widths.
-
-The current implementation uses the upstream Wi-Fi channel for the AP to improve compatibility with adapters that require station and AP operation to share a channel.
-
-Exact behavior depends on the wireless chipset and Linux driver.
-
----
-
-# Privileges
-
-The installed command automatically requests root privileges when required.
-
-Normal usage can therefore be:
-
-```bash
-wifi-hotspot start
-```
-
-instead of:
-
-```bash
-sudo wifi-hotspot start
-```
-
-The same applies to:
-
-```bash
-wifi-hotspot stop
-wifi-hotspot status
-wifi-hotspot diagnose
-```
-
----
-
-# Troubleshooting
-
-## Diagnose first
-
-```bash
-wifi-hotspot diagnose
-```
-
-Check for:
-
-```text
-[✓] Access Point mode
-[✓] Concurrent client + AP
-```
-
-If concurrent AP support is unavailable, the same physical adapter may not be able to remain connected to upstream Wi-Fi while providing the hotspot.
-
-## Check status
-
-```bash
-wifi-hotspot status
-```
-
-This reports:
-
-- AP interface state
-- hostapd state
-- dnsmasq state
-- IPv4 forwarding
-- NAT/firewall state
-- routing state
-- connected clients
-
-## Clean up a failed start
-
-```bash
-wifi-hotspot stop
-```
-
-Then:
-
-```bash
-iw dev
-```
-
-Normally `ap0` should not exist after a clean stop.
-
-You can also check:
-
-```bash
-ip link show ap0
-```
-
-## Inspect wireless interfaces
-
-```bash
-iw dev
-```
-
-During operation you may see:
-
-```text
-Interface ap0
-    type AP
-
-Interface wlp1s0
-    type managed
-```
-
-After stopping the hotspot, `ap0` should normally disappear.
-
----
-
-# Security
-
-The hotspot uses WPA2-PSK through `hostapd`.
-
-Passwords must contain:
-
-- At least 8 characters
-- At most 63 characters
-
-Do not publish real hotspot passwords, Wi-Fi credentials, API keys, SSH private keys, or other sensitive information in issues, logs, screenshots, or pull requests.
-
----
-
-# Installation Details
-
-The installer places the application under:
-
-```text
-/usr/local/lib/fedora-wifi-hotspot/
-```
-
-The system-wide command is installed at:
-
-```text
-/usr/local/sbin/wifi-hotspot
-```
-
-Supporting scripts are installed under:
-
-```text
-/usr/local/lib/fedora-wifi-hotspot/lib/
-```
-
-Temporary runtime files are stored under:
-
-```text
-/run/fedora-wifi-hotspot/
-```
-
----
-
-# Uninstallation
-
-From the cloned repository:
-
-```bash
-sudo ./uninstall.sh
-```
-
-The uninstaller:
-
-1. Stops an active hotspot.
-2. Removes the installed application.
-3. Removes the system-wide `wifi-hotspot` command.
-4. Removes runtime hotspot state.
-
-The cloned Git repository itself is not removed.
-
----
-
-# Project Structure
-
-```text
-fedora-wifi-hotspot/
-│
-├── wifi-hotspot
-├── install.sh
-├── uninstall.sh
-│
-├── lib/
-│   ├── detect.sh
-│   ├── network.sh
-│   ├── firewall.sh
-│   └── hotspot.sh
-│
-├── README.md
-├── LICENSE
-└── .gitignore
-```
-
-### `wifi-hotspot`
-
-Main command-line interface for argument parsing, interactive input, validation, command dispatch, privilege elevation, and hotspot lifecycle.
-
-### `lib/detect.sh`
-
-Hardware and Wi-Fi capability detection.
-
-### `lib/network.sh`
-
-Upstream network detection, gateway/source address detection, hotspot routing, policy routing, and route cleanup.
-
-### `lib/firewall.sh`
-
-IPv4 forwarding, firewall rules, NAT, and firewall cleanup.
-
-### `lib/hotspot.sh`
-
-AP interface creation/configuration, hostapd and dnsmasq configuration, service lifecycle, and AP cleanup.
-
-### `install.sh`
-
-Fedora detection, dependency installation, system-wide installation, and verification.
-
-### `uninstall.sh`
-
-System-wide application removal.
-
----
-
-# Development
-
-Clone the repository:
-
-```bash
-git clone https://github.com/shubhamcoder260/fedora-wifi-hotspot.git
-cd fedora-wifi-hotspot
-```
-
-Run diagnostics directly from the source tree:
-
-```bash
-sudo ./wifi-hotspot diagnose
-```
-
-Test a hotspot:
-
-```bash
-sudo ./wifi-hotspot start --ssid "Fedora-Test" --password "FedoraTest123"
-```
-
-Stop it:
-
-```bash
-sudo ./wifi-hotspot stop
-```
-
-## Shell syntax checks
-
-```bash
-bash -n wifi-hotspot
-bash -n lib/detect.sh
-bash -n lib/network.sh
-bash -n lib/firewall.sh
-bash -n lib/hotspot.sh
-bash -n install.sh
-bash -n uninstall.sh
-```
-
-Each command should return exit code `0`.
-
----
-
-# Project Status
-
-**Current release: v0.1.0**
-
-The current release has been tested for:
-
-- Automatic upstream Wi-Fi detection
-- Concurrent client + AP operation
-- Virtual AP interface creation
-- NetworkManager interaction
-- hostapd
-- dnsmasq
-- DHCP
-- IPv4 forwarding
-- NAT
-- Hotspot client connectivity
-- Status reporting
-- Clean shutdown
-- Automatic cleanup
-- System-wide installation
-- System-wide uninstallation
-- Interactive configuration
-- Command-line configuration
-- Hardware diagnostics
-
-Testing across additional Fedora systems, wireless chipsets, and driver combinations is ongoing.
-
-This is an early release and does not guarantee compatibility with every Fedora wireless adapter.
-
----
-
-# Roadmap
-
-Potential future improvements:
-
-- **Web UI Dashboard**: A planned web-based dashboard (using Node.js/Vite) to manage your hotspot from any connected device!
-- Broader wireless chipset testing
-- Driver-specific compatibility handling
-- Improved error recovery
-- More robust firewall backend handling
-- IPv6 support
-- Configurable DHCP ranges
-- Configuration file support
-- Additional Fedora version testing
-- Fedora RPM packaging
-- COPR distribution
-- Automated integration testing
-- Expanded hardware compatibility reporting
-- More detailed diagnostics
-
----
-
-# Contributing
-
-Contributions, bug reports, hardware compatibility reports, and improvements are welcome.
-
-When reporting a hardware compatibility issue, include:
-
-```bash
-wifi-hotspot diagnose
-```
-
-and, if the hotspot was started:
-
-```bash
-wifi-hotspot status
-```
-
-Useful additional information:
-
-```bash
-iw dev
-ip -4 route
-```
-
-Do not include passwords, private credentials, API keys, SSH private keys, or other sensitive information.
-
----
-
-# License
-
-This project is licensed under the terms provided in [LICENSE](LICENSE).
-
----
-
-# Repository
-
-https://github.com/shubhamcoder260/fedora-wifi-hotspot
+<div align="center">
+  Made with ❤️ by <a href="https://github.com/shubhamcoder260">shubhamcoder260</a> & <a href="https://github.com/ha-re-ram">ha-re-ram</a>.
+</div>

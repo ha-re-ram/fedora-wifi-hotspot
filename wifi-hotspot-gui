@@ -8,7 +8,12 @@ import os
 import threading
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))
-HOTSPOT_BIN = os.path.join(PROJECT_DIR, "wifi-hotspot")
+GLOBAL_BIN = "/usr/local/lib/fedora-wifi-hotspot/wifi-hotspot"
+
+if os.path.exists(GLOBAL_BIN):
+    HOTSPOT_BIN = GLOBAL_BIN
+else:
+    HOTSPOT_BIN = os.path.join(PROJECT_DIR, "wifi-hotspot")
 
 class HotspotGUI(Gtk.ApplicationWindow):
     def __init__(self, *args, **kwargs):
@@ -131,11 +136,12 @@ class HotspotGUI(Gtk.ApplicationWindow):
         self.textview.modify_font(Pango.FontDescription("monospace 10"))
         # Add basic styling to make it look like a terminal
         css_provider = Gtk.CssProvider()
-        css_provider.load_from_data(b"textview { background-color: #1e1e1e; color: #00ff00; }")
+        css_provider.load_from_data(b"textview { background-color: #1e1e1e; color: #00ff00; padding: 10px; }")
         self.textview.get_style_context().add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         
         scroll = Gtk.ScrolledWindow()
         scroll.set_vexpand(True)
+        scroll.set_min_content_height(250)
         scroll.add(self.textview)
         self.main_box.pack_start(scroll, True, True, 0)
 
@@ -145,11 +151,11 @@ class HotspotGUI(Gtk.ApplicationWindow):
         about = Gtk.AboutDialog()
         about.set_transient_for(self)
         about.set_program_name("Fedora Wi-Fi Hotspot")
-        about.set_version("1.0.0")
-        about.set_comments("A lightweight tool to share your Wi-Fi connection on Fedora Linux.")
-        about.set_website("https://github.com/shubhamcoder260/fedora-wifi-hotspot")
+        about.set_version("1.1.0")
+        about.set_comments("A lightweight tool with a beautiful GUI to share your Wi-Fi connection on Fedora Linux.")
+        about.set_website("https://github.com/ha-re-ram/fedora-wifi-hotspot")
         about.set_website_label("GitHub Repository")
-        about.set_authors(["shubhamcoder260 & Contributors"])
+        about.set_authors(["shubhamcoder260 (Backend)", "ha-re-ram (GUI & Enhancements)"])
         about.set_logo_icon_name("network-wireless-symbolic")
         about.run()
         about.destroy()

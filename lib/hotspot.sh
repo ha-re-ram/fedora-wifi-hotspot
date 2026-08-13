@@ -243,7 +243,7 @@ start_dnsmasq() {
     dnsmasq \
         --conf-file="$DNSMASQ_CONF" \
         --no-daemon \
-        --pid-file="$DNSMASQ_PID" &
+        --pid-file="$DNSMASQ_PID" >/dev/null 2>&1 &
 
     dnsmasq_pid=$!
 

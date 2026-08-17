@@ -154,7 +154,7 @@ class HotspotGUI(Gtk.ApplicationWindow):
         about.set_program_name("Fedora Wi-Fi Hotspot")
         about.set_version("1.1.0")
         about.set_comments("A lightweight tool with a beautiful GUI to share your Wi-Fi connection on Fedora Linux.")
-        about.set_website("https://github.com/ha-re-ram/fedora-wifi-hotspot-gui")
+        about.set_website("https://github.com/ha-re-ram/fedora-wifi-hotspot")
         about.set_website_label("GitHub Repository")
         
         # Professional Credits Section

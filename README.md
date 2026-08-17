@@ -42,14 +42,21 @@ With the brand-new **Native GNOME GUI**, managing your hotspot has never been ea
 
 ## 🛠️ Installation
 
-**The easiest way to install is via the pre-packaged Release!**
-
+### Method 1: Pre-Packaged Release (Recommended)
 1. Go to the [Releases page](https://github.com/ha-re-ram/fedora-wifi-hotspot/releases/latest) and download the `.tar.gz` file.
 2. Extract the downloaded folder and open a terminal inside it.
 3. **Run the Installer:**
    ```bash
    sudo ./install.sh
    ```
+
+### Method 2: Build from Source (Git Clone)
+If you prefer to download the raw source code:
+```bash
+git clone https://github.com/ha-re-ram/fedora-wifi-hotspot.git
+cd fedora-wifi-hotspot
+sudo ./install.sh
+```
 
 The automated installer will download all required dependencies (`hostapd`, `dnsmasq`, etc.), install the command-line tool, copy the GUI into your system applications, and configure passwordless access.
 

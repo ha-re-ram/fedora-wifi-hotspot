@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fedora Wi-Fi Hotspot - Share Your Connection</title>
+    <meta name="description" content="A powerful, modern Wi-Fi hotspot tool for Fedora Linux. Create an access point easily with our beautiful GNOME GUI.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --fedora-blue: #294172;
+            --fedora-light: #3c6eb4;
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --card-bg: rgba(22, 27, 34, 0.7);
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated Background */
+        .bg-glow {
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(60, 110, 180, 0.15) 0%, rgba(13, 17, 23, 1) 50%);
+            animation: rotate 30s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 80px 0;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #fff, var(--fedora-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #8b949e;
+            max-width: 600px;
+            margin: 0 auto 40px auto;
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--fedora-light);
+            color: #fff;
+            padding: 16px 40px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(60, 110, 180, 0.3);
+            border: 2px solid transparent;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 25px rgba(60, 110, 180, 0.4);
+            background: #2b5592;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--fedora-light);
+            color: var(--fedora-light);
+            box-shadow: none;
+            margin-left: 15px;
+        }
+
+        .btn-outline:hover {
+            background: rgba(60, 110, 180, 0.1);
+            color: #fff;
+            border-color: #fff;
+        }
+
+        /* Glassmorphism Cards */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            border-color: var(--fedora-light);
+        }
+
+        .card h3 {
+            font-size: 1.5rem;
+            color: #fff;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .card p {
+            color: #8b949e;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .icon {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        /* Terminal Block */
+        .terminal {
+            background: #010409;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 60px;
+            text-align: left;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .terminal-header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot.red { background: #ff5f56; }
+        .dot.yellow { background: #ffbd2e; }
+        .dot.green { background: #27c93f; }
+
+        .code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #58a6ff;
+            font-size: 1rem;
+            white-space: pre-wrap;
+        }
+        
+        .code span.comment { color: #8b949e; }
+        .code span.cmd { color: #fff; }
+
+        footer {
+            text-align: center;
+            padding: 60px 0 40px 0;
+            color: #8b949e;
+            font-size: 0.9rem;
+        }
+        
+        footer a {
+            color: var(--fedora-light);
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+    
+    <div class="container">
+        <div class="hero">
+            <h1>Fedora Wi-Fi Hotspot</h1>
+            <p>Turn your Fedora Linux machine into a powerful, secure Wi-Fi access point with a single click. Say goodbye to terminal configurations.</p>
+            
+            <a href="https://github.com/ha-re-ram/fedora-wifi-hotspot/releases/latest" class="btn">Download .tar.gz</a>
+            <a href="https://github.com/ha-re-ram/fedora-wifi-hotspot" class="btn btn-outline">View on GitHub</a>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <span class="icon">✨</span>
+                <h3>Native GNOME GUI</h3>
+                <p>A beautifully integrated, responsive desktop application built specifically for the modern Fedora desktop experience.</p>
+            </div>
+            <div class="card">
+                <span class="icon">🚀</span>
+                <h3>Concurrent AP</h3>
+                <p>Share your existing Wi-Fi connection through the exact same adapter without dropping your internet connection.</p>
+            </div>
+            <div class="card">
+                <span class="icon">🔒</span>
+                <h3>Passwordless Access</h3>
+                <p>Once installed, secure sudoers integration means you never have to type your root password to start or stop the hotspot.</p>
+            </div>
+        </div>
+
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+            </div>
+            <div class="code">
+<span class="comment"># Alternative: Install via Git Clone</span>
+<span class="cmd">git clone https://github.com/ha-re-ram/fedora-wifi-hotspot.git</span>
+<span class="cmd">cd fedora-wifi-hotspot</span>
+<span class="cmd">sudo ./install.sh</span>
+            </div>
+        </div>
+
+        <footer>
+            <p>Made with ❤️ by <a href="https://github.com/ha-re-ram">ha-re-ram</a> &amp; <a href="https://github.com/shubhamcoder260">shubhamcoder260</a>. <br> Open Source under the MIT License.</p>
+        </footer>
+    </div>
+</body>
+</html>

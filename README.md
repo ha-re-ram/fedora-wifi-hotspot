@@ -9,9 +9,11 @@
 
 <br>
 
-**Keywords / SEO**: `Fedora Wi-Fi Hotspot`, `Linux Access Point`, `Create Hotspot Fedora`, `Share Wi-Fi Linux`, `Concurrent AP Client`, `hostapd GUI`, `dnsmasq GUI`, `GNOME Wi-Fi Hotspot`.
+<!-- 
+Keywords / SEO: Fedora Wi-Fi Hotspot, Linux Access Point, Create Hotspot Fedora, Share Wi-Fi Linux, Concurrent AP Client, hostapd GUI, dnsmasq GUI, GNOME Wi-Fi Hotspot.
 
-> **Tip for Repo Owner**: Don't forget to add these tags in your GitHub repository's "About" section topics: `fedora`, `wifi-hotspot`, `linux-networking`, `gtk3-python`, `access-point`.
+Tip for Repo Owner: Don't forget to add these tags in your GitHub repository's "About" section topics: fedora, wifi-hotspot, linux-networking, gtk3-python, access-point.
+-->
 
 `fedora-wifi-hotspot` empowers your Fedora system to share its existing Wi-Fi or Ethernet internet connection through a software access point (hotspot) using your wireless adapter.
 
@@ -40,13 +42,11 @@ With the brand-new **Native GNOME GUI**, managing your hotspot has never been ea
 
 ## 🛠️ Installation
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/ha-re-ram/fedora-wifi-hotspot.git
-   cd fedora-wifi-hotspot
-   ```
+**The easiest way to install is via the pre-packaged Release!**
 
-2. **Run the Installer:**
+1. Go to the [Releases page](https://github.com/ha-re-ram/fedora-wifi-hotspot/releases/latest) and download the `.tar.gz` file.
+2. Extract the downloaded folder and open a terminal inside it.
+3. **Run the Installer:**
    ```bash
    sudo ./install.sh
    ```

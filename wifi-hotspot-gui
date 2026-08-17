@@ -132,6 +132,7 @@ class HotspotGUI(Gtk.ApplicationWindow):
         
         self.textview = Gtk.TextView()
         self.textview.set_editable(False)
+        self.textview.set_cursor_visible(False)
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD)
         self.textview.modify_font(Pango.FontDescription("monospace 10"))
         # Add basic styling to make it look like a terminal
@@ -153,9 +154,13 @@ class HotspotGUI(Gtk.ApplicationWindow):
         about.set_program_name("Fedora Wi-Fi Hotspot")
         about.set_version("1.1.0")
         about.set_comments("A lightweight tool with a beautiful GUI to share your Wi-Fi connection on Fedora Linux.")
-        about.set_website("https://github.com/ha-re-ram/fedora-wifi-hotspot")
+        about.set_website("https://github.com/ha-re-ram/fedora-wifi-hotspot-gui")
         about.set_website_label("GitHub Repository")
-        about.set_authors(["shubhamcoder260 (Backend)", "ha-re-ram (GUI & Enhancements)"])
+        
+        # Professional Credits Section
+        about.add_credit_section("GUI & Desktop Integration", ["ha-re-ram"])
+        about.add_credit_section("Original Backend Scripting", ["shubhamcoder260"])
+        
         about.set_logo_icon_name("network-wireless-symbolic")
         about.run()
         about.destroy()
